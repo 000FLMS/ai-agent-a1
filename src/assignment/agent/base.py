@@ -276,7 +276,12 @@ class Agent:
             reasoning_effort="medium",
             max_completion_tokens=self.compaction_max_tokens,
         )
+        ##################################
 
+        # Use `compaction_response` to update what `build_prompt` emits, but
+        # DO NOT modify the object itself. Let the method return it unchanged.
+
+        ### Do not modify this section ###
         return compaction_prompt, compaction_response.model_dump(mode="json")
         ##################################
 
