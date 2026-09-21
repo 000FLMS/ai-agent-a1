@@ -130,13 +130,97 @@ INVOKE_SKILL_TOOL = {
     },
 }
 
-# TODO(3.1.a): Define an OpenAI function-tool schema named ``play_move``.
+# (3.1.a): Define an OpenAI function-tool schema named ``play_move``.
 # It must accept exactly one required string argument named ``move``, explain
 # that moves use UCI notation (for example e2e4), and reject extra arguments.
-PLAY_MOVE_TOOL: dict = {}
+PLAY_MOVE_TOOL: dict = {
+    "type": "function",
+    "function": {
+        "name": "play_move",
+        "description": (
+            "Commit one legal UCI move as White on the live board; Black replies automatically. "
+            "Never use this tool to explore hypothetical moves. When run_python is available,"
+            "it can also plays your turn; do not repeat if run_python already called play_move."
+        ),
+        "strict": True,
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "move": {
+                    "type": "string",
+                    "description": (
+                        "Universal Chess Interface (UCI) notation for next move"
+                        "\n e.g. e2e4 (white pawn push) e7e5 (black pawn push) e1g1 (white short castling) e7e8q (for promotion)\n"
+                        ),
+                },
+            },
+            "required": ["move"],
+            "additionalProperties": False,
+        },
+},
 
-# TODO(3.3): Define the `simulate_move` tool, like the `play_move` tool.
-SIMULATE_MOVE_TOOL: dict = {}
+}
 
-# TODO()
-RUN_PYTHON_TOOL: dict = {}
+# (3.3): Define the `simulate_move` tool, like the `play_move` tool.
+SIMULATE_MOVE_TOOL: dict = {
+    "type": "function",
+    "function": {
+        "name": "simulate_move",
+        "description": (
+            "Inspect a complete six-field FEN, or simulate one legal UCI move for either side. "
+            "Returns position JSON including fen, squares, legal_moves, in_check, game_over, "
+            "winner, and result. Never changes the live board or generates an automatic reply. "
+        ),
+        "strict": True,
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "fen": {
+                    "type": "string",
+                    "description": ("Forsyth–Edwards Notation (FEN) - a string describing a chess position"),
+                },
+                "move": {
+                    "type": "string",
+                    "description": (
+                        "Universal Chess Interface (UCI) notation for next move"
+                        "\n e.g. e2e4 (white pawn push) e7e5 (black pawn push) e1g1 (white short castling) e7e8q (for promotion)\n"
+                        ),
+                },
+            },
+            "required": ["fen"],
+            "additionalProperties": False,
+        },
+    },
+}
+
+RUN_PYTHON_TOOL: dict = {
+    "type": "function",
+    "function": {
+        "name": "run_python",
+        "description": (
+            "Execute Python in the sandbox with synchronous simulate_move(fen, move=None) "
+            "and play_move(move) functions already available; both return dictionaries. "
+            "Follow the loaded chess skill (if any). After any opening exception it specifies, use "
+            "one snippet per turn to search with simulate_move, choose the best move, and "
+            "call play_move(best) to actually change the game state. Printing a move does "
+            "not execute it. Do not import chess, replace the simulator, or make a separate "
+            "direct play_move call afterward. Returns stdout, stderr, and error. If execution "
+            "fails, use the error and refreshed live state to repair the snippet; do not "
+            "assume the board is unchanged or silently bypass a broken tool."
+        ),
+        "strict": True,
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "string",
+                    "description": ("The python code to run built tools in the sandbox namespace: "
+                                    "simulate_move(fen: str, move: str | None = None), play_move(move: str)\n"
+                                    "The simulate_move and play_move are the same as provided tools"),
+                },
+            },
+            "required": ["code"],
+            "additionalProperties": False,
+        },
+    },
+}

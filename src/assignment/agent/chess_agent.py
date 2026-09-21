@@ -106,10 +106,22 @@ class ChessAgent(Agent):
             compaction_max_tokens=compaction_max_tokens,
         )
 
-        # TODO(Part 3): Register the play_move tool schema from tools.py.
+        # (Part 3): Register the play_move tool schema from tools.py.
+
+        self.tools += [PLAY_MOVE_TOOL]
+        self.tool_registry.update({
+            PLAY_MOVE_TOOL["function"]['name']: _play_move,
+        })
 
         if programmatic_tools:
-            self.tools.append(RUN_PYTHON_TOOL)
+            self.tools += [RUN_PYTHON_TOOL, SIMULATE_MOVE_TOOL]
+            self.tool_registry.update({
+                RUN_PYTHON_TOOL["function"]['name']: _run_python,
+                SIMULATE_MOVE_TOOL["function"]['name']: _simulate_move,
+            })
+            if self.skills:
+                # base agent already registered, overwrite it 
+                self.tool_registry[INVOKE_SKILL_TOOL["function"]['name']] = _invoke_skill
 
         # run_python always executes in the sandbox, on the port the chess
         # server is listening on there.
@@ -163,7 +175,7 @@ class ChessAgent(Agent):
     ) -> list[dict[str, str]]:
         """Execute model-generated ``play_move`` calls against the chess API."""
 
-        # TODO(Part 3.1):
+        # (Part 3.1):
         # 1. Dispatch on the function name, and ignore a tool this agent did
         #    not register.
         # 2. Hand the raw arguments to the matching chess_tools helper, with
@@ -175,6 +187,52 @@ class ChessAgent(Agent):
         # 5. Turn malformed, unknown, rejected, or extra parallel calls into
         #    recoverable <chess_error> observations instead of crashing.
 
-        # TODO(Part 3.3-4): add cases for simulate_move and run_python, with
-        # linked observations and recoverable errors, just like the old tool.
-        raise NotImplementedError
+        obvs = []
+        
+        for call in tool_calls:
+            tool_name = call.get("function", {}).get("name", "unknown")
+            tool_id =  call.get("id", "")
+            obv = {
+                'role': 'tool', 
+                'content': '', 
+                'tool_call_id': tool_id, 
+                'name': tool_name
+            }
+            try:
+                args = call.get("function", {}).get("arguments", "")
+                
+                if tool_name in self.tool_registry:
+                    if tool_name == RUN_PYTHON_TOOL['function']["name"]:
+                        result = self.tool_registry[tool_name](self.env, self.python_sandbox_port, args)
+                    elif tool_name == INVOKE_SKILL_TOOL['function']["name"]:
+                        result = self.tool_registry[tool_name](self.skills, args)
+                    else:
+                        result = self.tool_registry[tool_name](self.chess_client, args)
+
+                    if tool_name != INVOKE_SKILL_TOOL['function']["name"] and "<chess_error>" not in result:
+                        if tool_name == PLAY_MOVE_TOOL['function']["name"]:
+                            state = json.loads(result)
+                            obv["content"] = self.format_state(state)
+                        else:
+                            state = _game_state(self.chess_client)
+                            obv["content"] = f"Execute result: {result} \n Chess state: {self.format_state(state)}"
+                            
+                        self.last_state = state
+                        self.finished = bool(state.get("game_over"))
+                    else:
+                        obv["content"] = result 
+                    
+                else:
+                    obv["content"] = "<chess_error>  ERROR: Called unknown tool </chess_error>"
+
+            except Exception as e:
+                obv["content"] = f"<chess_error> {str(e)} </chess_error>"
+
+
+            obvs.append(obv)
+
+        return obvs
+
+
+
+        
