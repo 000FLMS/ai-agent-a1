@@ -139,8 +139,9 @@ PLAY_MOVE_TOOL: dict = {
         "name": "play_move",
         "description": (
             "Commit one legal UCI move as White on the live board; Black replies automatically. "
-            "Never use this tool to explore hypothetical moves. When run_python is available,"
-            "it can also plays your turn; do not repeat if run_python already called play_move."
+            "Never use it for exploration. If the loaded skill requires Python search, "
+            "commit through play_move inside run_python, not a separate tool call. "
+            "Never repeat a move already committed by run_python."
         ),
         "strict": True,
         "parameters": {
@@ -169,7 +170,9 @@ SIMULATE_MOVE_TOOL: dict = {
         "description": (
             "Inspect a complete six-field FEN, or simulate one legal UCI move for either side. "
             "Returns position JSON including fen, squares, legal_moves, in_check, game_over, "
-            "winner, and result. Never changes the live board or generates an automatic reply. "
+            "winner, and result. squares maps occupied square names to piece symbols "
+            "(uppercase White, lowercase Black); it is not a grid. "
+            "Never changes the live board or generates an automatic reply."
         ),
         "strict": True,
         "parameters": {
@@ -200,13 +203,14 @@ RUN_PYTHON_TOOL: dict = {
         "description": (
             "Execute Python in the sandbox with synchronous simulate_move(fen, move=None) "
             "and play_move(move) functions already available; both return dictionaries. "
-            "Follow the loaded chess skill (if any). After any opening exception it specifies, use "
-            "one snippet per turn to search with simulate_move, choose the best move, and "
-            "call play_move(best) to actually change the game state. Printing a move does "
-            "not execute it. Do not import chess, replace the simulator, or make a separate "
-            "direct play_move call afterward. Returns stdout, stderr, and error. If execution "
-            "fails, use the error and refreshed live state to repair the snippet; do not "
-            "assume the board is unchanged or silently bypass a broken tool."
+            "Follow the loaded skill each turn, including its opening exception. "
+            "Search with simulate_move, then commit exactly once with play_move (can directly call it inside code) as the "
+            "last statement; printing a move does not play it. "
+            "Check returned data shapes and evaluation consistency before committing. "
+            "If code fails or scores look implausible, inspect and repair it; do not "
+            "abandon the skill, substitute intuition, or replace the simulator. "
+            "Returns stdout, stderr, and error. After a failure, recheck the live board "
+            "before retrying: an earlier move may already have committed."
         ),
         "strict": True,
         "parameters": {
