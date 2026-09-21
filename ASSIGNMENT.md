@@ -353,8 +353,7 @@ The grader replays patches and submitted trajectories; it does not make new LLM 
 
 ## Submission
 
-Submit one archive containing your changed files under `src/assignment/agent/`
-and these artifacts:
+Submit one ZIP archive containing your changed files under `src/assignment/agent/` and these artifacts:
 
 ```text
 artifacts/fix.patch
@@ -376,8 +375,7 @@ artifacts/observation-experiment.md
 artifacts/part3-python-skill-trajectory.json
 ```
 
-Also include `src/assignment/prompts.py` only if you changed it. Do not submit
-credentials, `.env`, task files, tests, submodule contents, or instructor files.
+Also include `src/assignment/prompts.py` only if you changed it. Do **NOT** submit credentials, `.env`, task files, tests, submodule contents, or instructor files. Your ZIP should contain the `src/` and `artifacts` subfolders, and an `AI_USAGE.md` file. The `AI_USAGE.md` should detail your use of any AI technologies for this assignment. List all the tools you used, and provide a clear description of how you used each of these tools. If you did not use any AI assistance, declare that in this file. We will not grade your submitted `AI_USAGE.md` file, but we will check your understanding of the code you submitted through a quiz (details of which will be announced separately).
 
 [^1]: In offline evaluation settings like this, you typically specify the task by structuring it as a request from a user. See these [docs](https://learn.microsoft.com/en-us/azure/foundry/openai/how-to/chatgpt?tabs=python-key%2Cdotnet-secure%2Cjavascript-secure&pivots=programming-language-python) for more examples.
 
